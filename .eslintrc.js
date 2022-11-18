@@ -28,6 +28,9 @@ module.exports = {
     '@typescript-eslint',
   ],
   rules: {
+    'no-unused-vars': 'warn',
+    '@typescript-eslint/no-unused-vars': 'warn',
+    'no-multiple-empty-lines': 'warn',
     'no-nested-ternary': 'off',
     '@typescript-eslint/member-delimiter-style': ['warn', {
       multiline: {
