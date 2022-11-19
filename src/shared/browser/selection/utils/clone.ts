@@ -1,24 +1,30 @@
-import { iif, of, pipe, throwError } from 'rxjs';
-import { filter, map } from 'rxjs/operators';
+import { left, right } from 'fp-ts/Either';
+import { of, pipe } from 'rxjs';
 
 import { fragmentToHtml } from 'shared/browser';
-import { truthy } from 'shared/utils';
+import { mapRight } from 'shared/rxjs/either';
 
-export const getSelection$ = () => iif(
-  () => typeof window !== 'undefined' && typeof window.getSelection === 'function',
-  of(window.getSelection()),
-  throwError(() => new Error('Cannot get the selection.')),
+export const getSelection$ = () => of(
+  typeof window !== 'undefined' && typeof window.getSelection === 'function'
+    ? right(window.getSelection())
+    : left(new Error('Cannot get the selection.')),
 );
 
 export const cloneSelection = pipe(
-  filter<Selection | null | undefined, Selection>(truthy),
-  filter((selection) => selection.rangeCount > 0),
-  map((selection) => selection.getRangeAt(0)),
-  map((range) => range?.cloneContents() ?? ''),
+  mapRight((selection: Selection | null | undefined) => (selection
+    ? right(selection)
+    : left(new Error('Selection is undefined.')))),
+  mapRight((selection) => (selection.rangeCount > 0
+    ? right(selection)
+    : left(new Error('rangeCount is 0.')))),
+  mapRight((selection) => right(selection.getRangeAt(0))),
+  mapRight((range) => right(range?.cloneContents() ?? '')),
+  mapRight((fragment) => (!fragment
+    ? left(new Error('Cannot cloneContents in range.'))
+    : right(fragment))),
 );
 
 export const cloneHtmlSelection$ = () => getSelection$().pipe(
   cloneSelection,
-  filter(truthy),
-  map(fragmentToHtml),
+  mapRight((fragment) => right(fragmentToHtml(fragment))),
 );
