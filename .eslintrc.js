@@ -21,13 +21,14 @@ module.exports = {
     tsconfigRootDir: __dirname,
     project: './tsconfig.json',
   },
-  ignorePatterns: ['.eslintrc.js'],
+  ignorePatterns: ['.eslintrc.js', 'build/'],
   plugins: [
     'react',
     'react-hooks',
     '@typescript-eslint',
   ],
   rules: {
+    '@typescript-eslint/semi': 'warn',
     'no-unused-vars': 'warn',
     '@typescript-eslint/no-unused-vars': 'warn',
     'no-multiple-empty-lines': 'warn',
