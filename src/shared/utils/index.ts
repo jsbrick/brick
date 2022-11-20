@@ -1,1 +1,2 @@
-export { truthy } from './truthy';
+export * from './operators';
+export * from './types';

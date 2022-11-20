@@ -1,30 +1,43 @@
-import { left, right } from 'fp-ts/Either';
 import { of, pipe } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
-import { fragmentToHtml } from 'shared/browser';
-import { mapRight } from 'shared/rxjs/either';
+import { BrickError, createErrorsMap, isBrickError } from 'shared/errors';
 
-export const getSelection$ = () => of(
+import { fragmentToHtml } from '../../utils';
+
+const SelectionErrors = createErrorsMap('unsupported', 'unknownSelection', 'zeroRange');
+
+export const getSelection$ = () => (
   typeof window !== 'undefined' && typeof window.getSelection === 'function'
-    ? right(window.getSelection())
-    : left(new Error('Cannot get the selection.')),
+    ? of(window.getSelection())
+    : BrickError.throw('Cannot get the selection.', SelectionErrors.unsupported)
+);
+
+const checkSelection = pipe(
+  (selection: unknown): Selection => (
+    selection instanceof Selection
+      ? selection : BrickError.throw('Selection required argument.', SelectionErrors.unknownSelection)
+  ),
+  (selection): Selection => (
+    selection.rangeCount > 0
+      ? selection
+      : BrickError.throw('rangeCount is 0.', SelectionErrors.zeroRange)
+  ),
 );
 
 export const cloneSelection = pipe(
-  mapRight((selection: Selection | null | undefined) => (selection
-    ? right(selection)
-    : left(new Error('Selection is undefined.')))),
-  mapRight((selection) => (selection.rangeCount > 0
-    ? right(selection)
-    : left(new Error('rangeCount is 0.')))),
-  mapRight((selection) => right(selection.getRangeAt(0))),
-  mapRight((range) => right(range?.cloneContents() ?? '')),
-  mapRight((fragment) => (!fragment
-    ? left(new Error('Cannot cloneContents in range.'))
-    : right(fragment))),
+  checkSelection,
+  (selection: Selection) => selection.getRangeAt(0),
+  (range) => range.cloneContents(),
 );
 
 export const cloneHtmlSelection$ = () => getSelection$().pipe(
-  cloneSelection,
-  mapRight((fragment) => right(fragmentToHtml(fragment))),
+  map(cloneSelection),
+  map(fragmentToHtml),
+  catchError((error) => {
+    if (isBrickError(error) && error.code === SelectionErrors.zeroRange) {
+      return of('');
+    }
+    throw error;
+  }),
 );
